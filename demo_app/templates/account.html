@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo Bank — Account Details</title>
+</head>
+<body>
+    <a href="{{ url_for('member_details', member_id=member_id) }}">
+        Back to member details
+    </a>
+
+    <h1>{{ account_type | capitalize }} Account</h1>
+
+    <dl>
+        <dt>Member</dt>
+        <dd>{{ member["name"] }}</dd>
+
+        <dt>Member ID</dt>
+        <dd>{{ member_id }}</dd>
+
+        <dt>Available balance</dt>
+        <dd>{{ account["available_balance"] }}</dd>
+
+        <dt>Currency</dt>
+        <dd>{{ account["currency"] }}</dd>
+    </dl>
+</body>
+</html>

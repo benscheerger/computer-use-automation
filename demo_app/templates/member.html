@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo Bank — Member Details</title>
+</head>
+<body>
+    <a href="{{ url_for('search') }}">Back to member search</a>
+
+    <h1>{{ member["name"] }}</h1>
+    <p>Member ID: {{ member_id }}</p>
+
+    <h2>Accounts</h2>
+
+    <ul>
+        {% for account_type in member["accounts"] %}
+            <li>
+                <a href="{{ url_for('account_details',
+                                    member_id=member_id,
+                                    account_type=account_type) }}">
+                    {{ account_type | capitalize }}
+                </a>
+            </li>
+        {% else %}
+            <li>No accounts found.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

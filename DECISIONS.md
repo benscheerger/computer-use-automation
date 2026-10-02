@@ -4,7 +4,7 @@
 Status: Planned
 
 Decision:
-Build a small banking demo containing only synthetic records.
+Build a small banking demo containing only synthetic records. Demo app loads data from a json file, so data can be edited or changed without editing the app code.
 
 Reason:
 Control the UI and data, reproduce failures, and demonstrate

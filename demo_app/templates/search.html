@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo Bank — Member Search</title>
+</head>
+<body>
+    <h1>Member Search</h1>
+
+    <form action="/" method="get">
+        <label for="member-id">Member ID</label>
+
+        <input
+            id="member-id"
+            name="member_id"
+            type="text"
+            value="{{ member_id }}"
+            required
+        >
+
+        <button type="submit">Search</button>
+    </form>
+
+    {% if member_id %}
+        <h2>Search Results</h2>
+
+        {% if member %}
+            <p>
+                <a href="{{ url_for('member_details', member_id=member_id) }}">
+                    {{ member_id }} — {{ member["name"] }}
+                </a>
+            </p>
+        {% else %}
+            <p>No member found.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

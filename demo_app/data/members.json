@@ -1,0 +1,29 @@
+{
+    "DEMO-101": {
+      "name": "Alex Example",
+      "accounts": {
+        "savings": {
+          "available_balance": "1250.00",
+          "currency": "USD"
+        }
+      }
+    },
+    "DEMO-202": {
+      "name": "Jordan Sample",
+      "accounts": {
+        "savings": {
+          "available_balance": "3875.50",
+          "currency": "USD"
+        }
+      }
+    },
+    "DEMO-303": {
+      "name": "Casey Test",
+      "accounts": {
+        "savings": {
+          "available_balance": "642.25",
+          "currency": "USD"
+        }
+      }
+    }
+  }
