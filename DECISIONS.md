@@ -117,3 +117,11 @@ A browser-context request guard checks destinations and permits only GET request
 **Reason:** Makes execution reviewable while limiting sensitive information in saved logs.
 
 **Tradeoff:** Basic events provide limited failure detail; richer sanitized diagnostics will be added separately.
+
+## D021 — Distinguish business outcomes from automation failures
+
+**Decision:** Detect an explicit member-not-found state, verify it corresponds to the requested search, and return a typed business outcome instead of continuing to a missing link.
+
+**Reason:** Section 3.3 requires expected business outcomes to be reported separately from recoverable conditions and hard failures.
+
+**Tradeoff:** The initial detector uses a marker in the local demo. Other applications require their own outcome detection strategy.
