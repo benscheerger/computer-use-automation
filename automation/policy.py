@@ -22,7 +22,10 @@ ALLOWED_PATHS = (
 )
 
 ALLOWED_FILL_LABELS = frozenset({"Member ID"})
-ALLOWED_BUTTONS = frozenset({"Search"})
+ALLOWED_BUTTONS = frozenset({
+    "Search",
+    "Dismiss notice",
+})
 
 
 def check_url(url: str) -> None:

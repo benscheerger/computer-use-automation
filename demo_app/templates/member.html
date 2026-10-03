@@ -5,6 +5,41 @@
     <title>Demo Bank — Member Details</title>
 </head>
 <body>
+    {% if notice_mode != "off" %}
+        <div
+            role="dialog"
+            aria-label="Service notice"
+            aria-modal="true"
+            style="
+                position: fixed;
+                inset: 0;
+                z-index: 1000;
+                background: rgba(0, 0, 0, 0.25);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            "
+        >
+            <div style="background: white; padding: 24px;">
+                <h2>Service notice</h2>
+                <p>This is a simulated informational notice.</p>
+
+                {% if notice_mode == "dismissible" %}
+                <button
+                    type="button"
+                    onclick="this.closest('[role=dialog]').remove();"
+                >
+                    Dismiss notice
+                </button>
+            {% else %}
+                <button type="button">
+                    Dismiss notice
+                </button>
+            {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
     <a href="{{ url_for('search') }}">Back to member search</a>
 
     <h1>{{ member["name"] }}</h1>

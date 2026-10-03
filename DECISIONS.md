@@ -125,3 +125,43 @@ A browser-context request guard checks destinations and permits only GET request
 **Reason:** Section 3.3 requires expected business outcomes to be reported separately from recoverable conditions and hard failures.
 
 **Tradeoff:** The initial detector uses a marker in the local demo. Other applications require their own outcome detection strategy.
+
+## D022 — Return distinct typed replay results
+
+**Decision:** Return separate success, business-outcome, and failure variants. Known operational failures include the step and sanitized diagnostic context and produce a failed log event and nonzero exit code.
+
+**Reason:** Gives callers an explicit result contract and keeps execution evidence consistent with the returned outcome.
+
+**Tradeoff:** Unexpected programming exceptions still propagate for debugging.
+
+## D023 — Centralize capability metadata
+
+**Decision:** Define fixed metadata defaults in the capability model. Require explicit version and output-contract metadata when loading saved artifacts.
+
+**Reason:** Avoids duplicated creation metadata while preventing loaders from assuming an artifact’s format.
+
+**Tradeoff:** Older artifacts require explicit migration when their contract changes.
+
+## D024 — Save sanitized structural failure evidence
+
+**Decision:** Save a bounded main-frame DOM structure, known control counts, and generated failure context alongside the event log. Exclude page text, input values, URLs, and raw attributes.
+
+**Reason:** Provides richer failure evidence required by Section 3.5 while limiting sensitive data persistence.
+
+**Tradeoff:** Structural evidence cannot show visual appearance or diagnose every content-dependent problem.
+
+## D025 — Bound recovery for known notices
+
+**Decision:** Automatically dismiss only a recognized service notice through the shared executor. Permit one dismissal per replay run and verify disappearance within 1.5 seconds after the click.
+
+**Reason:** Handles a recoverable runtime condition while preventing endless attempts or blind repetition of workflow actions.
+
+**Tradeoff:** Persistent or unsupported blockers stop replay; this handler covers only the known notice pattern.
+
+## D026 — Configure recovery scenarios with startup flags
+
+**Decision:** Use a demo startup setting to select no notice, a dismissible notice, or a persistent notice.
+
+**Reason:** Makes successful recovery and exhausted recovery reproducible without editing application code for each test.
+
+**Tradeoff:** Changing scenarios requires restarting the demo server, and the simulated behavior provides limited evidence of generalization to other applications.

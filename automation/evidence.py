@@ -20,6 +20,11 @@ EventName = Literal[
     "run_completed",
     "run_failed",
     "member_not_found",
+    "failure_evidence_saved",
+    "failure_evidence_unavailable",
+    "recovery_started",
+    "recovery_completed",
+    "recovery_exhausted",
 ]
 
 ActionKind = Literal[

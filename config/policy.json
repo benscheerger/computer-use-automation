@@ -1,0 +1,33 @@
+{
+    "allowed_origins": [
+      {
+        "scheme": "http",
+        "host": "127.0.0.1",
+        "port": 8000
+      }
+    ],
+    "allowed_path_patterns": [
+      "/",
+      "/members/DEMO-[0-9]+",
+      "/members/DEMO-[0-9]+/accounts/[a-z]+"
+    ],
+    "allowed_methods": [
+      "GET"
+    ],
+    "allowed_action_kinds": [
+      "fill",
+      "click",
+      "click_link"
+    ],
+    "allowed_fill_labels": [
+      "Member ID"
+    ],
+    "allowed_button_names": [
+      "Search",
+      "Dismiss notice"
+    ],
+    "blocked_risky_button_names": [
+      "Transfer",
+      "Delete account"
+    ]
+  }

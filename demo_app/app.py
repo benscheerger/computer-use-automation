@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import os
 
 from flask import Flask, abort, render_template, request
 
@@ -13,6 +14,11 @@ def load_members(path: Path) -> dict:
         return json.load(file)
 
 MEMBERS = load_members(DATA_PATH)
+
+NOTICE_MODE = os.getenv("DEMO_NOTICE", "off")
+
+if NOTICE_MODE not in {"off", "dismissible", "persistent"}:
+    raise ValueError("Unknown DEMO_NOTICE setting.")
 
 # Search Functionality
 @app.get("/")
@@ -38,6 +44,7 @@ def member_details(member_id):
         "member.html",
         member_id=member_id,
         member=member,
+        notice_mode=NOTICE_MODE,
     )
 
 # Account Details Page which can be clicked on from the member details page

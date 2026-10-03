@@ -1,5 +1,7 @@
 import json
 from urllib.parse import parse_qs, urljoin, urlsplit
+from automation.failure_evidence import save_failure_evidence
+from automation.recovery import RecoveryBudget, recover_known_notice
 
 from playwright.sync_api import (
     Error as PlaywrightError,
@@ -162,10 +164,12 @@ def run_replay(
     base_url: str,
     log: RunLog,
 ) -> ReplayResult:
+    
     step_index: int | None = None
     action_kind: ActionKind | None = None
     current_action: BrowserAction | None = None
     expected = "Navigate to the permitted entry page."
+    recovery_budget = RecoveryBudget(limit=1)
 
     try:
         start_url = urljoin(base_url, capability.start_path)
@@ -188,6 +192,26 @@ def run_replay(
                 "step_started",
                 step=index,
                 action=action_kind,
+            )
+
+            action_kind = None
+            expected = (
+                "Clear a recognized service notice "
+                "within the recovery budget."
+            )
+
+            recover_known_notice(
+                page=page,
+                log=log,
+                budget=recovery_budget,
+                step=index,
+                blocked_requests=blocked_requests,
+            )
+
+            action_kind = step.action.kind
+            expected = (
+                f"Execute recorded {action_kind} action "
+                "against a unique, actionable target."
             )
 
             current_action = resolve_action(step.action, inputs)
@@ -245,6 +269,20 @@ def run_replay(
 
         current_action = None
         action_kind = None
+
+        expected = (
+            "Clear a recognized service notice "
+            "within the recovery budget."
+        )
+
+        recover_known_notice(
+            page=page,
+            log=log,
+            budget=recovery_budget,
+            step=step_index,
+            blocked_requests=blocked_requests,
+        )
+        
         expected = (
             "Verify the requested savings account and extract "
             "a finite balance and valid currency code."
@@ -284,5 +322,29 @@ def run_replay(
             step=step_index,
             action=action_kind,
         )
+        
+        try:
+            evidence_path = save_failure_evidence(
+                page=page,
+                log=log,
+                failure=failure,
+            )
+
+            log.emit(
+                "failure_evidence_saved",
+                step=step_index,
+                action=action_kind,
+            )
+
+            print(f"Failure evidence: {evidence_path}")
+
+        except OSError:
+            log.emit(
+                "failure_evidence_unavailable",
+                step=step_index,
+                action=action_kind,
+            )
+
+            print("Failure evidence could not be written.")
 
         return failure
