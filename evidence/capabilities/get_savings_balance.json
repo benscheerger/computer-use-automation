@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "name": "get_savings_balance",
-  "source_run_id": "3f9e1d3f-17a9-489f-b8b7-19ba54e93905",
+  "source_run_id": "0d8868c6-d948-436b-9e67-f967825e647c",
   "start_path": "/",
   "input_type": "MemberLookupInputs",
   "output_type": "BalanceResult",

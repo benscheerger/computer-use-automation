@@ -4,14 +4,13 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from playwright.sync_api import sync_playwright
 
-from automation.network import install_request_guard
-from automation.discovery import run_discovery
-from automation.planner import MODEL
-from automation.policy import check_url
-
-from automation.policy import PolicyViolation
-from automation.verification import verify_balance
 from automation.capability import Capability, MemberLookupInputs
+from automation.discovery import run_discovery
+from automation.evidence import RunLog
+from automation.network import install_request_guard
+from automation.planner import MODEL
+from automation.policy import PolicyViolation, check_url
+from automation.verification import verify_balance
 
 
 def main():
@@ -30,78 +29,94 @@ def main():
         f"Find member {inputs.member_id} and return their {account_type} "
         "account's available balance and currency."
     )
-    
     start_url = "http://127.0.0.1:8000/"
 
-    with OpenAI(timeout=30.0, max_retries=0) as client:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=False)
+    project_root = Path(__file__).resolve().parents[1]
 
-            try:
-                context = browser.new_context(service_workers="block")
-                blocked_requests = install_request_guard(context)
+    with RunLog(
+        directory=project_root / "evidence" / "runs",
+        mode="discovery",
+    ) as log:
+        print(f"Evidence log: {log.path}")
+        print(f"Model: {MODEL}")
 
-                page = context.new_page()
-                page.set_default_timeout(5000)
+        with OpenAI(timeout=30.0, max_retries=0) as client:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(headless=False)
 
-                check_url(start_url)
-                page.goto(start_url)
-                print(f"Model: {MODEL}")
+                try:
+                    context = browser.new_context(
+                        service_workers="block"
+                    )
+                    blocked_requests = install_request_guard(context)
 
-                discovery = run_discovery(
-                    client=client,
-                    page=page,
-                    goal=goal,
-                    inputs=inputs,
-                    blocked_requests=blocked_requests,
-                    max_steps=8,
-                )
+                    page = context.new_page()
+                    page.set_default_timeout(5000)
 
-                result = verify_balance(
-                    page=page,
-                    expected_member_id=inputs.member_id,
-                    expected_account_type=account_type,
-                )
+                    check_url(start_url)
+                    page.goto(start_url)
 
-                if blocked_requests:
-                    raise PolicyViolation(blocked_requests[-1])
+                    discovery = run_discovery(
+                        client=client,
+                        page=page,
+                        goal=goal,
+                        inputs=inputs,
+                        blocked_requests=blocked_requests,
+                        log=log,
+                        max_steps=8,
+                    )
 
-                # Only construct and save a capability after verification.
-                capability = Capability(
-                    schema_version="1.0",
-                    name="get_savings_balance",
-                    source_run_id=discovery.run_id,
-                    start_path="/",
-                    input_type="MemberLookupInputs",
-                    output_type="BalanceResult",
-                    verifier="savings_balance_v1",
-                    steps=discovery.steps,
-                )
+                    log.emit("verification_started")
 
-                project_root = Path(__file__).resolve().parents[1]
-                artifact_path = (
-                    project_root
-                    / "evidence"
-                    / "capabilities"
-                    / "get_savings_balance.json"
-                )
-                artifact_path.parent.mkdir(parents=True, exist_ok=True)
-                artifact_path.write_text(
-                    capability.model_dump_json(indent=2) + "\n",
-                    encoding="utf-8",
-                )
+                    result = verify_balance(
+                        page=page,
+                        expected_member_id=inputs.member_id,
+                        expected_account_type=account_type,
+                    )
 
-                print("\nModel summary:")
-                print(discovery.finish.summary)
+                    if blocked_requests:
+                        raise PolicyViolation(blocked_requests[-1])
 
-                print("\nVerified result:")
-                print(result.model_dump_json(indent=2))
+                    log.emit("verification_passed")
 
-                print(f"\nSaved capability: {artifact_path}")
-                print(f"Recorded browser actions: {len(capability.steps)}")
+                    capability = Capability(
+                        schema_version="1.0",
+                        name="get_savings_balance",
+                        source_run_id=discovery.run_id,
+                        start_path="/",
+                        input_type="MemberLookupInputs",
+                        output_type="BalanceResult",
+                        verifier="savings_balance_v1",
+                        steps=discovery.steps,
+                    )
 
-            finally:
-                browser.close()
+                    artifact_path = (
+                        project_root
+                        / "evidence"
+                        / "capabilities"
+                        / "get_savings_balance.json"
+                    )
+                    artifact_path.parent.mkdir(
+                        parents=True,
+                        exist_ok=True,
+                    )
+                    artifact_path.write_text(
+                        capability.model_dump_json(indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+
+                    log.emit("capability_saved")
+
+                    print("\nModel summary:")
+                    print(discovery.finish.summary)
+
+                    print("\nVerified result:")
+                    print(result.model_dump_json(indent=2))
+
+                    print(f"\nSaved capability: {artifact_path}")
+
+                finally:
+                    browser.close()
 
 
 if __name__ == "__main__":

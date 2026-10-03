@@ -90,3 +90,30 @@ A browser-context request guard checks destinations and permits only GET request
 
 **Tradeoff:** The initial schema supports the demo’s savings-balance workflow and URL structure; broader workflows will require extensions.
 
+## D018 — Replay without model calls
+
+**Decision:** Replay loads a validated capability, substitutes typed inputs, and executes its recorded steps through the shared executor and policy checks.
+
+**Reason:** Makes execution repeatable and avoids additional model costs or decisions during replay.
+
+**Tradeoff:** Replay cannot adapt to unexpected UI changes; failures currently stop the run.
+
+**Validation:** A capability discovered with DEMO-101 successfully replayed for DEMO-202 without model calls.
+
+## D019 — Check intermediate and final replay outcomes
+
+**Decision:** Check the expected URL path after every replay action, then independently verify the requested account and extract its balance from the UI.
+
+**Reason:** Detects navigation mismatches and prevents completed actions alone from being treated as task success.
+
+**Tradeoff:** Path checkpoints provide limited evidence of page contents; final verification supplies stronger checks.
+
+**Validation:** All four checkpoints passed for DEMO-202, and final verification returned 3875.50 USD.
+
+## D020 — Save structured evidence for each run
+
+**Decision:** Write typed JSONL events with run IDs, timestamps, step numbers, action types, and outcomes. Exclude input values, balances, page contents, and raw exception messages.
+
+**Reason:** Makes execution reviewable while limiting sensitive information in saved logs.
+
+**Tradeoff:** Basic events provide limited failure detail; richer sanitized diagnostics will be added separately.

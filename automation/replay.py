@@ -19,6 +19,7 @@ from automation.executor import execute_action
 from automation.observation import observe_page
 from automation.policy import PolicyViolation, check_url
 from automation.verification import BalanceResult, verify_balance
+from automation.evidence import RunLog
 
 
 class ReplayError(Exception):
@@ -58,6 +59,7 @@ def run_replay(
     inputs: MemberLookupInputs,
     blocked_requests: list[str],
     base_url: str,
+    log: RunLog,
 ) -> BalanceResult:
     start_url = urljoin(base_url, capability.start_path)
     check_url(start_url)
@@ -67,6 +69,13 @@ def run_replay(
         raise PolicyViolation(blocked_requests[-1])
 
     for index, step in enumerate(capability.steps, start=1):
+
+        log.emit(
+            "step_started",
+            step=index,
+            action=step.action.kind,
+        )
+
         action = resolve_action(step.action, inputs)
         execute_action(page, action)
 
@@ -85,6 +94,12 @@ def run_replay(
                 f"Checkpoint failed after step {index}: "
                 "the page path did not match the recorded expectation."
             )
+        
+        log.emit(
+            "checkpoint_passed",
+            step=index,
+            action=step.action.kind,
+        )
 
         print(
             f"Step {index}/{len(capability.steps)}: "
@@ -92,6 +107,7 @@ def run_replay(
         )
 
     # Capability v1 supports only the savings-balance verifier.
+    log.emit("verification_started")
     result = verify_balance(
         page=page,
         expected_member_id=inputs.member_id,
@@ -100,5 +116,7 @@ def run_replay(
 
     if blocked_requests:
         raise PolicyViolation(blocked_requests[-1])
+    
+    log.emit("verification_passed")
 
     return result

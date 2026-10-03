@@ -1,0 +1,127 @@
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+from typing import Literal, TextIO
+
+from automation.actions import StrictModel
+
+
+EventName = Literal[
+    "run_started",
+    "model_requested",
+    "action_proposed",
+    "step_started",
+    "step_completed",
+    "checkpoint_passed",
+    "verification_started",
+    "verification_passed",
+    "capability_saved",
+    "run_completed",
+    "run_failed",
+]
+
+ActionKind = Literal[
+    "fill",
+    "click",
+    "click_button",
+    "click_link",
+    "finish",
+]
+
+
+class EvidenceEvent(StrictModel):
+    schema_version: Literal["1.0"]
+    timestamp: str
+    elapsed_ms: int
+    run_id: str
+    mode: Literal["discovery", "replay"]
+    source_run_id: str | None
+    event: EventName
+    step: int | None
+    action: ActionKind | None
+    error_type: str | None
+
+
+class RunLog:
+    def __init__(
+        self,
+        directory: Path,
+        mode: Literal["discovery", "replay"],
+        source_run_id: str | None = None,
+    ):
+        self.run_id = str(uuid4())
+        self.path = directory / f"{self.run_id}.jsonl"
+        self.mode: Literal["discovery", "replay"] = mode
+        self.source_run_id = source_run_id
+
+        self._file: TextIO | None = None
+        self._started_at = 0.0
+        self._step: int | None = None
+        self._action: ActionKind | None = None
+
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._file = self.path.open("x", encoding="utf-8")
+        self._started_at = time.monotonic()
+
+        try:
+            self.emit("run_started")
+        except BaseException:
+            self._file.close()
+            raise
+
+        return self
+
+    def emit(
+        self,
+        event: EventName,
+        *,
+        step: int | None = None,
+        action: ActionKind | None = None,
+        error_type: str | None = None,
+    ) -> None:
+        if self._file is None or self._file.closed:
+            raise RuntimeError("The evidence log is not open.")
+
+        entry = EvidenceEvent(
+            schema_version="1.0",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            elapsed_ms=int(
+                (time.monotonic() - self._started_at) * 1000
+            ),
+            run_id=self.run_id,
+            mode=self.mode,
+            source_run_id=self.source_run_id,
+            event=event,
+            step=step,
+            action=action,
+            error_type=error_type,
+        )
+
+        self._file.write(entry.model_dump_json() + "\n")
+        self._file.flush()
+
+        self._step = step
+        self._action = action
+
+    def __exit__(self, exc_type, exc_value, traceback):
+            file = self._file
+
+            if file is None:
+                raise RuntimeError("The evidence log is not open.")
+
+            try:
+                if exc_type is None:
+                    self.emit("run_completed")
+                else:
+                    self.emit(
+                        "run_failed",
+                        step=self._step,
+                        action=self._action,
+                        error_type=exc_type.__name__,
+                    )
+            finally:
+                file.close()
+
+            return False

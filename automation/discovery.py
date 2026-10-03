@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from urllib.parse import urlsplit
-from uuid import uuid4
+from automation.evidence import RunLog
 
 from openai import OpenAI
 from playwright.sync_api import Page
@@ -31,12 +31,13 @@ def run_discovery(
     goal: str,
     inputs: MemberLookupInputs,
     blocked_requests: list[str],
+    log: RunLog,
     max_steps: int = 8,
 ) -> DiscoveryRun:
     if max_steps < 1:
         raise ValueError("max_steps must be at least 1.")
 
-    run_id = str(uuid4())
+    run_id = log.run_id
     recorded_steps: list[CapabilityStep] = []
 
     for step in range(1, max_steps + 1):
@@ -44,6 +45,8 @@ def run_discovery(
 
         if blocked_requests:
             raise PolicyViolation(blocked_requests[-1])
+        
+        log.emit("model_requested", step=step)
 
         request = propose_action(
             client=client,
@@ -51,6 +54,12 @@ def run_discovery(
             observation=observation,
         )
         action = request.action
+
+        log.emit(
+            "action_proposed",
+            step=step,
+            action=action.kind,
+        )
 
         print(f"\nStep {step}/{max_steps}")
         print(action.model_dump_json(indent=2))
@@ -61,6 +70,12 @@ def run_discovery(
                 finish=action,
                 steps=recorded_steps,
             )
+        
+        log.emit(
+            "step_started",
+            step=step,
+            action=action.kind,
+        )
 
         # Capture the target while we are still on the original page.
         recorded_action = record_action(page, action, inputs)
@@ -87,6 +102,12 @@ def run_discovery(
                 action=recorded_action,
                 checkpoint=checkpoint,
             )
+        )
+
+        log.emit(
+            "step_completed",
+            step=step,
+            action=action.kind,
         )
 
     raise RuntimeError(
