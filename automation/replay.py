@@ -1,7 +1,12 @@
 import json
 from urllib.parse import parse_qs, urljoin, urlsplit
 from automation.failure_evidence import save_failure_evidence
-from automation.recovery import RecoveryBudget, recover_known_notice
+from automation.recovery import (
+    RecoveryBudget,
+    RecoveryLimitExceeded,
+    recover_known_notice,
+)
+from automation.handoff import HumanTakeover
 
 from playwright.sync_api import (
     Error as PlaywrightError,
@@ -163,6 +168,7 @@ def run_replay(
     blocked_requests: list[str],
     base_url: str,
     log: RunLog,
+    allow_human_takeover: bool = False,
 ) -> ReplayResult:
     
     step_index: int | None = None
@@ -178,6 +184,13 @@ def run_replay(
 
         if blocked_requests:
             raise PolicyViolation(blocked_requests[-1])
+        
+        handoff = HumanTakeover(
+            page=page,
+            log=log,
+            blocked_requests=blocked_requests,
+            enabled=allow_human_takeover,
+        )
 
         for index, step in enumerate(capability.steps, start=1):
             step_index = index
@@ -200,14 +213,52 @@ def run_replay(
                 "within the recovery budget."
             )
 
-            recover_known_notice(
-                page=page,
-                log=log,
-                budget=recovery_budget,
-                step=index,
-                blocked_requests=blocked_requests,
-            )
+            try:
+                recover_known_notice(
+                    page=page,
+                    log=log,
+                    budget=recovery_budget,
+                    step=step_index,
+                    blocked_requests=blocked_requests,
+                )
 
+            except RecoveryLimitExceeded:
+                if not allow_human_takeover:
+                    raise
+
+                pending_action = resolve_action(
+                    step.action,
+                    inputs,
+                )
+
+                if not isinstance(
+                    pending_action,
+                    LinkClickAction,
+                ):
+                    raise VerificationError(
+                        "This takeover supports a pending link action."
+                    )
+
+                expected_pre_action_path = (
+                    capability.start_path
+                    if step_index == 1
+                    else capability.steps[
+                        step_index - 2
+                    ].checkpoint.expected_path.resolve(inputs)
+                )
+
+                expected = (
+                    "Restore the requested member-details checkpoint "
+                    "and an unobstructed, unique recorded link."
+                )
+
+                handoff.restore_member_details(
+                    step=step_index,
+                    member_id=inputs.member_id,
+                    expected_path=expected_pre_action_path,
+                    pending_action=pending_action,
+                )
+            
             action_kind = step.action.kind
             expected = (
                 f"Execute recorded {action_kind} action "

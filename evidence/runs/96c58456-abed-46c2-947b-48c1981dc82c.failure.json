@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "run_id": "96c58456-abed-46c2-947b-48c1981dc82c",
+  "source_run_id": "0d8868c6-d948-436b-9e67-f967825e647c",
+  "failure": {
+    "status": "failure",
+    "code": "target_timeout",
+    "step": 4,
+    "expected": "Execute recorded click_link action against a unique, actionable target.",
+    "observed": "page=member_details; requested_member_matches=True; target_matches=0",
+    "error_type": "TimeoutError"
+  },
+  "dom": {
+    "nodes": [
+      {
+        "index": 0,
+        "parent_index": null,
+        "tag": "body",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 1,
+        "parent_index": 0,
+        "tag": "h1",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 2,
+        "parent_index": 0,
+        "tag": "p",
+        "has_layout_box": true,
+        "disabled": false
+      }
+    ],
+    "truncated": false
+  },
+  "known_controls": {
+    "member_id_fields": 0,
+    "search_buttons": 0,
+    "savings_links": 0
+  },
+  "frame_count": 1,
+  "capture_error": null
+}

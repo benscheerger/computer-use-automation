@@ -25,6 +25,14 @@ EventName = Literal[
     "recovery_started",
     "recovery_completed",
     "recovery_exhausted",
+    "handoff_started",
+    "manual_action",
+    "manual_recording_limit",
+    "handoff_resume_rejected",
+    "handoff_resumed",
+    "handoff_cancelled",
+    "handoff_timed_out",
+    "handoff_ended",
 ]
 
 ActionKind = Literal[
@@ -35,6 +43,16 @@ ActionKind = Literal[
     "finish",
 ]
 
+class HumanAction(StrictModel):
+    kind: Literal["click", "input", "change"]
+    target: Literal[
+        "member_id_field",
+        "search_button",
+        "savings_link",
+        "dismiss_notice_button",
+        "manual_resolution_button",
+        "other",
+    ]
 
 class EvidenceEvent(StrictModel):
     schema_version: Literal["1.0"]
@@ -47,6 +65,7 @@ class EvidenceEvent(StrictModel):
     step: int | None
     action: ActionKind | None
     error_type: str | None
+    human_action: HumanAction | None = None
 
 
 class RunLog:
@@ -87,6 +106,7 @@ class RunLog:
         step: int | None = None,
         action: ActionKind | None = None,
         error_type: str | None = None,
+        human_action: HumanAction | None = None,
     ) -> None:
         if self._file is None or self._file.closed:
             raise RuntimeError("The evidence log is not open.")
@@ -104,6 +124,7 @@ class RunLog:
             step=step,
             action=action,
             error_type=error_type,
+            human_action=human_action,
         )
 
         self._file.write(entry.model_dump_json() + "\n")

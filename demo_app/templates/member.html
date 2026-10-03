@@ -25,22 +25,31 @@
                 <p>This is a simulated informational notice.</p>
 
                 {% if notice_mode == "dismissible" %}
-                <button
-                    type="button"
-                    onclick="this.closest('[role=dialog]').remove();"
-                >
-                    Dismiss notice
-                </button>
-            {% else %}
-                <button type="button">
-                    Dismiss notice
-                </button>
-            {% endif %}
+                    <button
+                        type="button"
+                        onclick="this.closest('[role=dialog]').remove();"
+                    >
+                        Dismiss notice
+                    </button>
+                {% else %}
+                    <button type="button">
+                        Dismiss notice
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="this.closest('[role=dialog]').remove();"
+                    >
+                        Resolve notice manually
+                    </button>
+                {% endif %}
             </div>
         </div>
     {% endif %}
 
-    <a href="{{ url_for('search') }}">Back to member search</a>
+    <a href="{{ url_for('search') }}">
+        Back to member search
+    </a>
 
     <h1>{{ member["name"] }}</h1>
     <p>Member ID: {{ member_id }}</p>
@@ -50,9 +59,11 @@
     <ul>
         {% for account_type in member["accounts"] %}
             <li>
-                <a href="{{ url_for('account_details',
-                                    member_id=member_id,
-                                    account_type=account_type) }}">
+                <a href="{{ url_for(
+                    'account_details',
+                    member_id=member_id,
+                    account_type=account_type
+                ) }}">
                     {{ account_type | capitalize }}
                 </a>
             </li>

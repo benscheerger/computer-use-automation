@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="operator-token" content="{{ token }}">
+    <title>Automation — Operator Takeover</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 32px 16px;
+            background: #f3f5f8;
+            color: #172033;
+            font-family: system-ui, sans-serif;
+        }
+
+        main {
+            max-width: 680px;
+            margin: auto;
+            padding: 28px;
+            background: white;
+            border: 1px solid #dce2eb;
+            border-radius: 14px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: #e9eefb;
+            font-weight: 600;
+        }
+
+        dl {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 12px;
+        }
+
+        dt {
+            color: #586477;
+        }
+
+        dd {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .notice {
+            margin: 24px 0;
+            padding: 16px;
+            background: #fff7e5;
+            border-radius: 8px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            padding: 11px 18px;
+            border: 0;
+            border-radius: 8px;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #resume {
+            background: #2457d6;
+            color: white;
+        }
+
+        #cancel {
+            background: #fce7e7;
+            color: #922626;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .muted {
+            color: #586477;
+            font-size: 14px;
+        }
+
+        @media (max-width: 500px) {
+            dl {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            dd {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<main>
+    <h1>Operator takeover</h1>
+    <p id="status" class="status" role="status">Connecting</p>
+
+    <dl>
+        <dt>Task</dt>
+        <dd>Retrieve a member’s savings balance</dd>
+
+        <dt>Member</dt>
+        <dd id="member">—</dd>
+
+        <dt>Interrupted step</dt>
+        <dd id="step">—</dd>
+
+        <dt>Control owner</dt>
+        <dd id="owner">—</dd>
+
+        <dt>Time remaining</dt>
+        <dd id="remaining">—</dd>
+
+        <dt>Run ID</dt>
+        <dd id="run">—</dd>
+    </dl>
+
+    <div class="notice">
+        <strong>Automatic notice recovery was exhausted.</strong>
+        <p>
+            In the banking browser, click
+            <strong>Resolve notice manually</strong>.
+            Stay on the requested member’s details page.
+        </p>
+    </div>
+
+    <p id="message" aria-live="polite">
+        Waiting for the controller.
+    </p>
+
+    <div class="actions">
+        <button id="resume" type="button" disabled>
+            Resume automation
+        </button>
+        <button id="cancel" type="button" disabled>
+            Cancel run
+        </button>
+    </div>
+
+    <p class="muted">
+        Resume checks the member, page, notice, and recorded link
+        before returning control to automation.
+        The final banking result appears in the terminal.
+    </p>
+</main>
+
+<script>
+    const token = document.querySelector(
+        'meta[name="operator-token"]'
+    ).getAttribute("content");
+
+    const resumeButton = document.getElementById("resume");
+    const cancelButton = document.getElementById("cancel");
+    const message = document.getElementById("message");
+
+    let finished = false;
+
+    function disableButtons() {
+        resumeButton.disabled = true;
+        cancelButton.disabled = true;
+    }
+
+    function render(state) {
+        document.getElementById("status").textContent =
+            state.status.replaceAll("_", " ");
+
+        document.getElementById("member").textContent =
+            state.member_id;
+
+        document.getElementById("step").textContent =
+            state.step;
+
+        document.getElementById("run").textContent =
+            state.run_id;
+
+        document.getElementById("remaining").textContent =
+            `${state.remaining_seconds} seconds`;
+
+        document.getElementById("owner").textContent =
+            state.owner === "none"
+                ? "No active controller"
+                : state.owner;
+
+        message.textContent = state.message;
+
+        resumeButton.disabled = !state.can_command;
+        cancelButton.disabled = !state.can_command;
+        finished = state.finished;
+    }
+
+    async function poll() {
+        try {
+            const response = await fetch("/api/state", {
+                headers: {
+                    "X-Operator-Token": token,
+                },
+                cache: "no-store",
+            });
+
+            if (!response.ok) {
+                throw new Error("State request failed");
+            }
+
+            render(await response.json());
+        } catch {
+            disableButtons();
+            message.textContent =
+                "Controller connection closed. Check the terminal result.";
+            return;
+        }
+
+        if (!finished) {
+            setTimeout(poll, 300);
+        }
+    }
+
+    async function sendCommand(command) {
+        disableButtons();
+
+        try {
+            const response = await fetch("/api/command", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Operator-Token": token,
+                },
+                body: JSON.stringify({ command }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Command rejected");
+            }
+
+            render(await response.json());
+        } catch {
+            message.textContent =
+                "Command could not be accepted. Check the controller connection.";
+        }
+    }
+
+    resumeButton.addEventListener(
+        "click",
+        () => sendCommand("resume")
+    );
+
+    cancelButton.addEventListener(
+        "click",
+        () => sendCommand("cancel")
+    );
+
+    poll();
+</script>
+</body>
+</html>

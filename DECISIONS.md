@@ -165,3 +165,43 @@ A browser-context request guard checks destinations and permits only GET request
 **Reason:** Makes successful recovery and exhausted recovery reproducible without editing application code for each test.
 
 **Tradeoff:** Changing scenarios requires restarting the demo server, and the simulated behavior provides limited evidence of generalization to other applications.
+
+## D027 — Load browser policy from configuration
+
+**Decision:** Load allowed origins, routes, request methods, action kinds, and controls from a validated JSON policy at startup.
+
+**Reason:** Make application restrictions reviewable and configurable without editing automation code.
+
+**Tradeoff:** Policy changes require restarting the process. Risk blocking depends on the configured application rules.
+
+## D028 — Validate the browser state before resuming human takeover
+
+**Decision:** Offer one optional takeover per replay after exhausted notice recovery. Pause recorded actions in the same browser session, allow resume or cancellation, and validate the member-details checkpoint and pending link before continuing.
+
+**Reason:** Let an operator repair a recoverable interruption while preserving session continuity and explicit control ownership.
+
+**Tradeoff:** The initial implementation supports this specific checkpoint, requires an interactive terminal, and limits takeover to 180 seconds.
+
+## D029 — Separate the operator panel from browser execution
+
+**Decision:** Use a local Flask panel for takeover context and Resume/Cancel controls. Send commands through a queue and perform browser validation on the replay thread.
+
+**Reason:** Make intervention easy to demonstrate while preserving the original browser session and explicit control ownership.
+
+**Tradeoff:** Adds a local server and connection handling. The panel covers takeover only; final replay results remain in the terminal.
+
+## D030 — Collect discovery inputs through the operator panel
+
+**Decision:**: Collect the goal and member ID in the operator panel and validate them as a typed task before starting discovery.
+
+**Reason:** Make task setup accessible from the same interface used for operator intervention, without editing program code.
+
+**Tradeoff:** The panel must remain available through task execution and show validation and run failures clearly. Discovery remains scoped to savings-balance lookup.
+
+## D031 — Use a persistent operator console
+
+**Decision:**: Provide one local interface for natural-language task entry, member inputs, dataset selection, discovery, replay, takeover, and evidence review. Keep the selected dataset fixed throughout each run.
+
+**Reason:** Make the project straightforward to operate and keep runs reproducible.
+
+**Tradeoff:** Requires a persistent controller and dataset-aware demo startup. Task execution initially remains scoped to savings-balance lookup.

@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "run_id": "8bfb47f5-536a-4fdd-835b-d13f438a60fe",
+  "source_run_id": "0d8868c6-d948-436b-9e67-f967825e647c",
+  "failure": {
+    "status": "failure",
+    "code": "verification_failed",
+    "step": 4,
+    "expected": "Restore the requested member-details checkpoint and an unobstructed, unique recorded link.",
+    "observed": "page=member_details; requested_member_matches=True; target_matches=None",
+    "error_type": "HumanTakeoverCancelled"
+  },
+  "dom": {
+    "nodes": [
+      {
+        "index": 0,
+        "parent_index": null,
+        "tag": "body",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 1,
+        "parent_index": 0,
+        "tag": "div",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 2,
+        "parent_index": 1,
+        "tag": "div",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 3,
+        "parent_index": 2,
+        "tag": "h2",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 4,
+        "parent_index": 2,
+        "tag": "p",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 5,
+        "parent_index": 2,
+        "tag": "button",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 6,
+        "parent_index": 2,
+        "tag": "button",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 7,
+        "parent_index": 0,
+        "tag": "a",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 8,
+        "parent_index": 0,
+        "tag": "h1",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 9,
+        "parent_index": 0,
+        "tag": "p",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 10,
+        "parent_index": 0,
+        "tag": "h2",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 11,
+        "parent_index": 0,
+        "tag": "ul",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 12,
+        "parent_index": 11,
+        "tag": "li",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 13,
+        "parent_index": 12,
+        "tag": "a",
+        "has_layout_box": true,
+        "disabled": false
+      }
+    ],
+    "truncated": false
+  },
+  "known_controls": {
+    "member_id_fields": 0,
+    "search_buttons": 0,
+    "savings_links": 1
+  },
+  "frame_count": 1,
+  "capture_error": null
+}

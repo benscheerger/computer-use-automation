@@ -14,6 +14,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--member-id", required=True)
     parser.add_argument("--artifact", type=Path)
+    parser.add_argument(
+        "--human-takeover",
+        action="store_true",
+        help="Allow one operator takeover after exhausted notice recovery.",
+    )
     args = parser.parse_args()
 
     inputs = MemberLookupInputs(member_id=args.member_id)
@@ -75,6 +80,7 @@ def main():
                     blocked_requests=blocked_requests,
                     base_url="http://127.0.0.1:8000/",
                     log=log,
+                    allow_human_takeover=args.human_takeover,
                 )
 
                 print("\nReplay result:")
