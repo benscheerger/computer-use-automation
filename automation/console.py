@@ -7,11 +7,7 @@ from threading import Lock
 from typing import Any, Literal
 from uuid import UUID
 from automation.capability import MemberLookupInputs
-from automation.replay_job import (
-    list_capabilities,
-    load_saved_capability,
-    replay_capability,
-)
+
 from automation.console_takeover import (
     ConsoleTakeover,
     TakeoverCommand,
@@ -26,14 +22,16 @@ from flask import (
     request,
 )
 from pydantic import Field, ValidationError
-
-from automation.actions import StrictModel
-from automation.discovery_job import (
+from automation.jobs import (
     PROJECT_ROOT,
+    DiscoveryTask,
     discover_capability,
+    list_capabilities,
+    load_saved_capability,
+    replay_capability,
 )
+from automation.actions import StrictModel
 from automation.evidence import EvidenceEvent
-from automation.task import DiscoveryTask
 from demo_app.app import get_dataset_path, list_datasets
 
 

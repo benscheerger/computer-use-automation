@@ -1,6 +1,5 @@
 from automation.capability import MemberLookupInputs
-from automation.discovery_job import discover_capability
-from automation.task import DiscoveryTask
+from automation.jobs import DiscoveryTask, discover_capability
 
 
 def main():
