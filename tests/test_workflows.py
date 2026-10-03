@@ -7,7 +7,7 @@ from unittest.mock import patch
 from playwright.sync_api import Page
 
 from automation.capability import MemberLookupInputs
-from automation.console_takeover import (
+from automation.takeover_controls import (
     ConsoleTakeover,
     TakeoverCommand,
 )

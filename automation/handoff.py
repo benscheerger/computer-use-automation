@@ -1,11 +1,13 @@
 import json
 import webbrowser
 
-from automation.operator_panel import OperatorPanel
+from automation.takeover_controls import (
+    ConsoleTakeover,
+    OperatorPanel,
+)
 import time
 from typing import Any, Protocol
 
-from automation.console_takeover import ConsoleTakeover
 from urllib.parse import urljoin, urlsplit
 
 from playwright.sync_api import Error as PlaywrightError

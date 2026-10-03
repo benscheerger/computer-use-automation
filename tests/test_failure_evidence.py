@@ -3,10 +3,10 @@ from tempfile import TemporaryDirectory
 
 from playwright.sync_api import sync_playwright
 
-from automation.evidence import RunLog
-from automation.failure_evidence import (
+from automation.evidence import (
     FailureEvidence,
     save_failure_evidence,
+    RunLog,
 )
 from automation.results import ReplayFailure
 

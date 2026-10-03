@@ -1,6 +1,5 @@
 import json
 from urllib.parse import parse_qs, urljoin, urlsplit
-from automation.failure_evidence import save_failure_evidence
 from automation.recovery import (
     RecoveryBudget,
     RecoveryLimitExceeded,
@@ -29,7 +28,7 @@ from automation.capability import (
     RecordedFill,
     RecordedLinkClick,
 )
-from automation.evidence import ActionKind, RunLog
+from automation.evidence import ActionKind, RunLog, save_failure_evidence
 from automation.executor import execute_action
 from automation.observation import observe_page
 from automation.policy import PolicyViolation, check_url

@@ -8,7 +8,7 @@ from typing import Any, Literal
 from uuid import UUID
 from automation.capability import MemberLookupInputs
 
-from automation.console_takeover import (
+from automation.takeover_controls import (
     ConsoleTakeover,
     TakeoverCommand,
 )

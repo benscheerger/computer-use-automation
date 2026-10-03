@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from queue import Empty, Full, Queue
 from threading import Event, Lock, Thread
+from types import TracebackType
 from typing import Any, Literal, cast
 
 from flask import (
@@ -19,9 +20,9 @@ from flask import (
 from werkzeug.serving import WSGIRequestHandler, make_server
 
 
-OperatorCommand = Literal["resume", "cancel"]
+TakeoverCommand = Literal["resume", "cancel"]
 
-PanelStatus = Literal[
+TakeoverStatus = Literal[
     "human",
     "validating",
     "resumed",
@@ -64,10 +65,10 @@ class OperatorPanel:
 
         self._token = secrets.token_hex(32)
         self._lock = Lock()
-        self._commands: Queue[OperatorCommand] = Queue(maxsize=1)
+        self._commands: Queue[TakeoverCommand] = Queue(maxsize=1)
         self._finished_seen = Event()
 
-        self._status: PanelStatus = "human"
+        self._status: TakeoverStatus = "human"
         self._message = (
             "Automation is paused. Resolve the notice in the "
             "banking browser, then request resume."
@@ -96,7 +97,10 @@ class OperatorPanel:
             return response
 
         def require_token() -> None:
-            supplied = request.headers.get("X-Operator-Token", "")
+            supplied = request.headers.get(
+                "X-Operator-Token",
+                "",
+            )
 
             if not secrets.compare_digest(supplied, self._token):
                 abort(403)
@@ -134,7 +138,10 @@ class OperatorPanel:
             ):
                 abort(400)
 
-            requested = cast(OperatorCommand, body["command"])
+            requested = cast(
+                TakeoverCommand,
+                body["command"],
+            )
 
             if not self._submit(requested):
                 return jsonify(
@@ -192,7 +199,7 @@ class OperatorPanel:
             "finished": status in FINISHED_STATUSES,
         }
 
-    def _submit(self, command: OperatorCommand) -> bool:
+    def _submit(self, command: TakeoverCommand) -> bool:
         with self._lock:
             if self._status != "human":
                 return False
@@ -211,7 +218,7 @@ class OperatorPanel:
 
         return True
 
-    def poll_command(self) -> OperatorCommand | None:
+    def poll_command(self) -> TakeoverCommand | None:
         try:
             return self._commands.get_nowait()
         except Empty:
@@ -219,14 +226,19 @@ class OperatorPanel:
 
     def set_status(
         self,
-        status: PanelStatus,
+        status: TakeoverStatus,
         message: str,
     ) -> None:
         with self._lock:
             self._status = status
             self._message = message
 
-    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ) -> Literal[False]:
         with self._lock:
             if self._status not in FINISHED_STATUSES:
                 self._status = "failed"
@@ -246,3 +258,115 @@ class OperatorPanel:
             self._thread.join(timeout=1)
 
         return False
+
+
+class ConsoleTakeover:
+    def __init__(
+        self,
+        *,
+        run_id: str,
+        member_id: str,
+        step: int,
+        timeout_seconds: float,
+        url: str,
+    ):
+        if timeout_seconds <= 0:
+            raise ValueError("Takeover timeout must be positive.")
+
+        self.run_id = run_id
+        self.member_id = member_id
+        self.step = step
+        self.url = url
+        self.deadline = time.monotonic() + timeout_seconds
+
+        self._lock = Lock()
+        self._commands: Queue[TakeoverCommand] = Queue(maxsize=1)
+        self._status: TakeoverStatus = "human"
+        self._message = (
+            "Automation is paused. Repair the banking browser, "
+            "then Resume or Cancel."
+        )
+
+    def __enter__(self) -> "ConsoleTakeover":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]:
+        with self._lock:
+            if self._status not in FINISHED_STATUSES:
+                self._status = "failed"
+                self._message = (
+                    "Takeover ended. Review the replay result."
+                )
+
+        return False
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            remaining = max(
+                0,
+                math.ceil(self.deadline - time.monotonic()),
+            )
+
+            return {
+                "run_id": self.run_id,
+                "member_id": self.member_id,
+                "step": self.step,
+                "status": self._status,
+                "message": self._message,
+                "remaining_seconds": remaining,
+                "can_command": (
+                    self._status == "human"
+                    and remaining > 0
+                ),
+            }
+
+    def submit(
+        self,
+        command: TakeoverCommand,
+        *,
+        run_id: str,
+        step: int,
+    ) -> bool:
+        with self._lock:
+            if (
+                command not in {"resume", "cancel"}
+                or run_id != self.run_id
+                or step != self.step
+                or self._status != "human"
+                or time.monotonic() >= self.deadline
+            ):
+                return False
+
+            try:
+                self._commands.put_nowait(command)
+            except Full:
+                return False
+
+            self._status = "validating"
+            self._message = (
+                "Checking the resume checkpoint."
+                if command == "resume"
+                else "Cancellation requested."
+            )
+
+        return True
+
+    def poll_command(self) -> TakeoverCommand | None:
+        try:
+            return self._commands.get_nowait()
+        except Empty:
+            return None
+
+    def set_status(
+        self,
+        status: TakeoverStatus,
+        message: str,
+    ) -> None:
+        with self._lock:
+            self._status = status
+            self._message = message

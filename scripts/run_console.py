@@ -8,7 +8,7 @@ from automation.console import (
     ConsoleController,
     create_console_app,
 )
-from automation.operator_panel import QuietRequestHandler
+from automation.takeover_controls import QuietRequestHandler
 
 
 def main():
