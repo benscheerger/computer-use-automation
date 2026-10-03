@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -12,21 +13,35 @@ from automation.replay import run_replay
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--member-id", required=True)
+    parser.add_argument("--artifact", type=Path)
     args = parser.parse_args()
 
     inputs = MemberLookupInputs(member_id=args.member_id)
 
     project_root = Path(__file__).resolve().parents[1]
-    artifact_path = (
+
+    artifact_path = args.artifact or (
         project_root
         / "evidence"
         / "capabilities"
         / "get_savings_balance.json"
     )
 
-    capability = Capability.model_validate_json(
+    artifact_data = json.loads(
         artifact_path.read_text(encoding="utf-8")
     )
+
+    required_metadata = {"schema_version", "output_type"}
+
+    if (
+        not isinstance(artifact_data, dict)
+        or not required_metadata.issubset(artifact_data)
+    ):
+        raise ValueError(
+            "Artifact is missing required contract metadata."
+        )
+
+    capability = Capability.model_validate(artifact_data)
 
     with RunLog(
         directory=project_root / "evidence" / "runs",
@@ -62,11 +77,14 @@ def main():
                     log=log,
                 )
 
-                print("\nVerified replay result:")
+                print("\nReplay result:")
                 print(result.model_dump_json(indent=2))
 
             finally:
                 browser.close()
+
+    if result.status == "failure":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

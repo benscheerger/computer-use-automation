@@ -19,6 +19,7 @@ EventName = Literal[
     "capability_saved",
     "run_completed",
     "run_failed",
+    "member_not_found",
 ]
 
 ActionKind = Literal[
@@ -59,6 +60,7 @@ class RunLog:
         self._started_at = 0.0
         self._step: int | None = None
         self._action: ActionKind | None = None
+        self._failure_error_type: str | None = None
 
     def __enter__(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -106,22 +108,39 @@ class RunLog:
         self._action = action
 
     def __exit__(self, exc_type, exc_value, traceback):
-            file = self._file
+        file = self._file
 
-            if file is None:
-                raise RuntimeError("The evidence log is not open.")
+        if file is None:
+            raise RuntimeError("The evidence log is not open.")
 
-            try:
-                if exc_type is None:
-                    self.emit("run_completed")
-                else:
-                    self.emit(
-                        "run_failed",
-                        step=self._step,
-                        action=self._action,
-                        error_type=exc_type.__name__,
-                    )
-            finally:
-                file.close()
+        error_type = (
+            exc_type.__name__
+            if exc_type is not None
+            else self._failure_error_type
+        )
 
-            return False
+        try:
+            if error_type is None:
+                self.emit("run_completed")
+            else:
+                self.emit(
+                    "run_failed",
+                    step=self._step,
+                    action=self._action,
+                    error_type=error_type,
+                )
+        finally:
+            file.close()
+
+        return False
+    
+    def mark_failed(
+        self,
+        *,
+        error_type: str,
+        step: int | None,
+        action: ActionKind | None,
+    ) -> None:
+        self._failure_error_type = error_type
+        self._step = step
+        self._action = action

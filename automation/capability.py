@@ -72,14 +72,14 @@ class CapabilityStep(StrictModel):
 
 
 class Capability(StrictModel):
-    schema_version: Literal["1.0"]
-    name: Literal["get_savings_balance"]
+    schema_version: Literal["1.1"] = "1.1"
+    name: Literal["get_savings_balance"] = "get_savings_balance"
 
     source_run_id: str = Field(min_length=1)
-    start_path: Literal["/"]
+    start_path: Literal["/"] = "/"
 
-    input_type: Literal["MemberLookupInputs"]
-    output_type: Literal["BalanceResult"]
-    verifier: Literal["savings_balance_v1"]
+    input_type: Literal["MemberLookupInputs"] = "MemberLookupInputs"
+    output_type: Literal["ReplayResult"] = "ReplayResult"
+    verifier: Literal["savings_balance_v1"] = "savings_balance_v1"
 
     steps: list[CapabilityStep] = Field(min_length=1)

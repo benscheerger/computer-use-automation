@@ -80,13 +80,7 @@ def main():
                     log.emit("verification_passed")
 
                     capability = Capability(
-                        schema_version="1.0",
-                        name="get_savings_balance",
                         source_run_id=discovery.run_id,
-                        start_path="/",
-                        input_type="MemberLookupInputs",
-                        output_type="BalanceResult",
-                        verifier="savings_balance_v1",
                         steps=discovery.steps,
                     )
 

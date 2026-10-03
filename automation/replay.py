@@ -1,6 +1,11 @@
-from urllib.parse import urljoin, urlsplit
+import json
+from urllib.parse import parse_qs, urljoin, urlsplit
 
-from playwright.sync_api import Page
+from playwright.sync_api import (
+    Error as PlaywrightError,
+    Page,
+    TimeoutError as PlaywrightTimeoutError,
+)
 
 from automation.actions import (
     BrowserAction,
@@ -8,6 +13,7 @@ from automation.actions import (
     FillAction,
     LinkClickAction,
 )
+from automation.business_outcomes import detect_member_not_found
 from automation.capability import (
     Capability,
     MemberLookupInputs,
@@ -15,15 +21,26 @@ from automation.capability import (
     RecordedFill,
     RecordedLinkClick,
 )
+from automation.evidence import ActionKind, RunLog
 from automation.executor import execute_action
 from automation.observation import observe_page
 from automation.policy import PolicyViolation, check_url
-from automation.verification import BalanceResult, verify_balance
-from automation.evidence import RunLog
+from automation.results import (
+    FailureCode,
+    ReplayBusinessOutcome,
+    ReplayFailure,
+    ReplayResult,
+    ReplaySuccess,
+)
+from automation.verification import VerificationError, verify_balance
 
 
 class ReplayError(Exception):
-    """Replay did not reach an expected state."""
+    """Replay cannot interpret a recorded operation."""
+
+
+class CheckpointMismatch(ReplayError):
+    """Replay reached a different path than expected."""
 
 
 def resolve_action(
@@ -53,6 +70,90 @@ def resolve_action(
     raise ReplayError("Unsupported recorded action.")
 
 
+def describe_location(url: str, expected_member_id: str) -> str:
+    """Describe route structure without returning IDs or raw URLs."""
+    parsed = urlsplit(url)
+    parts = parsed.path.strip("/").split("/")
+
+    member_id = None
+
+    if parsed.path == "/":
+        page_kind = "search"
+        values = parse_qs(parsed.query).get("member_id", [])
+        if len(values) == 1:
+            member_id = values[0]
+
+    elif len(parts) == 2 and parts[0] == "members":
+        page_kind = "member_details"
+        member_id = parts[1]
+
+    elif (
+        len(parts) == 4
+        and parts[0] == "members"
+        and parts[2] == "accounts"
+    ):
+        page_kind = "account_details"
+        member_id = parts[1]
+
+    else:
+        page_kind = "other"
+
+    matches = (
+        member_id == expected_member_id
+        if member_id is not None
+        else None
+    )
+
+    return (
+        f"page={page_kind}; "
+        f"requested_member_matches={matches}"
+    )
+
+
+def describe_observed_state(
+    page: Page,
+    inputs: MemberLookupInputs,
+    action: BrowserAction | None,
+) -> str:
+    """Return safe diagnostic facts rather than raw page contents."""
+    try:
+        matches = None
+
+        if isinstance(action, FillAction):
+            matches = page.get_by_label(
+                action.label, exact=True
+            ).count()
+
+        elif isinstance(action, ClickAction):
+            matches = page.get_by_role(
+                action.role, name=action.name, exact=True
+            ).count()
+
+        elif isinstance(action, LinkClickAction):
+            selector = f"a[href={json.dumps(action.href)}]"
+            matches = page.locator(selector).count()
+
+        location = describe_location(page.url, inputs.member_id)
+        return f"{location}; target_matches={matches}"
+
+    except (PlaywrightError, ValueError):
+        return "Page state could not be inspected."
+
+
+def classify_failure(error: Exception) -> FailureCode:
+    if isinstance(error, PolicyViolation):
+        return "policy_violation"
+    if isinstance(error, CheckpointMismatch):
+        return "checkpoint_mismatch"
+    if isinstance(error, VerificationError):
+        return "verification_failed"
+    if isinstance(error, PlaywrightTimeoutError):
+        return "target_timeout"
+    if isinstance(error, PlaywrightError):
+        return "browser_error"
+    return "unsupported_action"
+
+
 def run_replay(
     page: Page,
     capability: Capability,
@@ -60,63 +161,128 @@ def run_replay(
     blocked_requests: list[str],
     base_url: str,
     log: RunLog,
-) -> BalanceResult:
-    start_url = urljoin(base_url, capability.start_path)
-    check_url(start_url)
-    page.goto(start_url)
+) -> ReplayResult:
+    step_index: int | None = None
+    action_kind: ActionKind | None = None
+    current_action: BrowserAction | None = None
+    expected = "Navigate to the permitted entry page."
 
-    if blocked_requests:
-        raise PolicyViolation(blocked_requests[-1])
-
-    for index, step in enumerate(capability.steps, start=1):
-
-        log.emit(
-            "step_started",
-            step=index,
-            action=step.action.kind,
-        )
-
-        action = resolve_action(step.action, inputs)
-        execute_action(page, action)
-
-        observation = observe_page(page)
+    try:
+        start_url = urljoin(base_url, capability.start_path)
+        check_url(start_url)
+        page.goto(start_url)
 
         if blocked_requests:
             raise PolicyViolation(blocked_requests[-1])
 
-        check_url(observation["url"])
-
-        actual_path = urlsplit(observation["url"]).path
-        expected_path = step.checkpoint.expected_path.resolve(inputs)
-
-        if actual_path != expected_path:
-            raise ReplayError(
-                f"Checkpoint failed after step {index}: "
-                "the page path did not match the recorded expectation."
+        for index, step in enumerate(capability.steps, start=1):
+            step_index = index
+            action_kind = step.action.kind
+            current_action = None
+            expected = (
+                f"Execute recorded {action_kind} action "
+                "against a unique, actionable target."
             )
-        
-        log.emit(
-            "checkpoint_passed",
-            step=index,
-            action=step.action.kind,
+
+            log.emit(
+                "step_started",
+                step=index,
+                action=action_kind,
+            )
+
+            current_action = resolve_action(step.action, inputs)
+            execute_action(page, current_action)
+
+            observation = observe_page(page)
+
+            if blocked_requests:
+                raise PolicyViolation(blocked_requests[-1])
+
+            check_url(observation["url"])
+
+            actual_path = urlsplit(observation["url"]).path
+            expected_path = step.checkpoint.expected_path.resolve(inputs)
+
+            expected = (
+                "Match the recorded checkpoint: "
+                + describe_location(expected_path, inputs.member_id)
+            )
+
+            if actual_path != expected_path:
+                raise CheckpointMismatch("Page path did not match.")
+
+            log.emit(
+                "checkpoint_passed",
+                step=index,
+                action=action_kind,
+            )
+
+            print(
+                f"Step {index}/{len(capability.steps)}: "
+                f"{current_action.kind} — checkpoint passed"
+            )
+
+            expected = "Recognize any supported business outcome."
+            business_outcome = detect_member_not_found(
+                page=page,
+                expected_member_id=inputs.member_id,
+            )
+
+            if blocked_requests:
+                raise PolicyViolation(blocked_requests[-1])
+
+            if business_outcome is not None:
+                log.emit(
+                    "member_not_found",
+                    step=index,
+                    action=action_kind,
+                )
+                return ReplayBusinessOutcome(
+                    code="member_not_found",
+                    member_id=business_outcome.member_id,
+                    step=index,
+                )
+
+        current_action = None
+        action_kind = None
+        expected = (
+            "Verify the requested savings account and extract "
+            "a finite balance and valid currency code."
+        )
+        log.emit("verification_started")
+
+        result = verify_balance(
+            page=page,
+            expected_member_id=inputs.member_id,
+            expected_account_type="savings",
         )
 
-        print(
-            f"Step {index}/{len(capability.steps)}: "
-            f"{action.kind} — checkpoint passed"
+        if blocked_requests:
+            raise PolicyViolation(blocked_requests[-1])
+
+        log.emit("verification_passed")
+        return ReplaySuccess(outputs=result)
+
+    except (
+        PolicyViolation,
+        ReplayError,
+        VerificationError,
+        PlaywrightError,
+    ) as error:
+        failure = ReplayFailure(
+            code=classify_failure(error),
+            step=step_index,
+            expected=expected,
+            observed=describe_observed_state(
+                page, inputs, current_action
+            ),
+            error_type=type(error).__name__,
         )
 
-    # Capability v1 supports only the savings-balance verifier.
-    log.emit("verification_started")
-    result = verify_balance(
-        page=page,
-        expected_member_id=inputs.member_id,
-        expected_account_type="savings",
-    )
+        log.mark_failed(
+            error_type=failure.error_type,
+            step=step_index,
+            action=action_kind,
+        )
 
-    if blocked_requests:
-        raise PolicyViolation(blocked_requests[-1])
-    
-    log.emit("verification_passed")
-
-    return result
+        return failure
