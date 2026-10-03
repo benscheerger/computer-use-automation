@@ -1,7 +1,12 @@
 import re
 from urllib.parse import urlsplit
 
-from automation.actions import ClickAction, FillAction
+from automation.actions import (
+    BrowserAction,
+    ClickAction,
+    FillAction,
+    LinkClickAction,
+)
 
 
 class PolicyViolation(Exception):
@@ -34,7 +39,7 @@ def check_url(url: str) -> None:
         raise PolicyViolation("Destination path is not allowed.")
 
 
-def check_action(action: FillAction | ClickAction) -> None:
+def check_action(action: BrowserAction) -> None:
     if isinstance(action, FillAction):
         if action.label not in ALLOWED_FILL_LABELS:
             raise PolicyViolation("Filling this field is not allowed.")
@@ -42,6 +47,12 @@ def check_action(action: FillAction | ClickAction) -> None:
     elif isinstance(action, ClickAction):
         if action.role == "button" and action.name not in ALLOWED_BUTTONS:
             raise PolicyViolation("Clicking this button is not allowed.")
+
+    elif isinstance(action, LinkClickAction):
+        if not action.href.startswith("/") or action.href.startswith("//"):
+            raise PolicyViolation(
+                "Recorded links must use a root-relative destination."
+            )
 
     else:
         raise PolicyViolation("Unsupported browser action.")

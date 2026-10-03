@@ -1,23 +1,23 @@
+import json
 from urllib.parse import urljoin
 
 from playwright.sync_api import Page
 
-from automation.actions import ClickAction, FillAction
+from automation.actions import (
+    BrowserAction,
+    ClickAction,
+    FillAction,
+    LinkClickAction,
+)
 from automation.policy import PolicyViolation, check_action, check_url
 
 
-def execute_action(
-    page: Page,
-    action: FillAction | ClickAction,
-) -> None:
+def execute_action(page: Page, action: BrowserAction) -> None:
     check_url(page.url)
     check_action(action)
 
     if isinstance(action, FillAction):
-        page.get_by_label(
-            action.label,
-            exact=True,
-        ).fill(action.value)
+        page.get_by_label(action.label, exact=True).fill(action.value)
 
     elif isinstance(action, ClickAction):
         target = page.get_by_role(
@@ -32,7 +32,13 @@ def execute_action(
             if href is None:
                 raise PolicyViolation("Link has no inspectable destination.")
 
-            destination = urljoin(page.url, href)
-            check_url(destination)
+            check_url(urljoin(page.url, href))
 
         target.click()
+
+    elif isinstance(action, LinkClickAction):
+        check_url(urljoin(page.url, action.href))
+
+        # Match an actual link in the UI by its exact recorded destination.
+        selector = f"a[href={json.dumps(action.href)}]"
+        page.locator(selector).click()

@@ -1,0 +1,177 @@
+{
+  "schema_version": "1.0",
+  "name": "get_savings_balance",
+  "source_run_id": "3f9e1d3f-17a9-489f-b8b7-19ba54e93905",
+  "start_path": "/",
+  "input_type": "MemberLookupInputs",
+  "output_type": "BalanceResult",
+  "verifier": "savings_balance_v1",
+  "steps": [
+    {
+      "action": {
+        "kind": "fill",
+        "label": "Member ID",
+        "value": {
+          "parts": [
+            {
+              "kind": "input",
+              "name": "member_id"
+            }
+          ]
+        }
+      },
+      "checkpoint": {
+        "expected_path": {
+          "parts": [
+            {
+              "kind": "literal",
+              "value": "/"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click_button",
+        "name": "Search"
+      },
+      "checkpoint": {
+        "expected_path": {
+          "parts": [
+            {
+              "kind": "literal",
+              "value": "/"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click_link",
+        "href": {
+          "parts": [
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "members"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "input",
+              "name": "member_id"
+            }
+          ]
+        }
+      },
+      "checkpoint": {
+        "expected_path": {
+          "parts": [
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "members"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "input",
+              "name": "member_id"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click_link",
+        "href": {
+          "parts": [
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "members"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "input",
+              "name": "member_id"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "accounts"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "savings"
+            }
+          ]
+        }
+      },
+      "checkpoint": {
+        "expected_path": {
+          "parts": [
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "members"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "input",
+              "name": "member_id"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "accounts"
+            },
+            {
+              "kind": "literal",
+              "value": "/"
+            },
+            {
+              "kind": "literal",
+              "value": "savings"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

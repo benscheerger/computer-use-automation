@@ -26,4 +26,10 @@ class FinishAction(StrictModel):
 
 class NextAction(StrictModel):
     action: FillAction | ClickAction | FinishAction
-    
+
+class LinkClickAction(StrictModel):
+    kind: Literal["click_link"]
+    href: str = Field(min_length=1)
+
+
+BrowserAction = FillAction | ClickAction | LinkClickAction

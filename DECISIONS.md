@@ -82,3 +82,11 @@ A browser-context request guard checks destinations and permits only GET request
 
 **Validation:** Discovery reached DEMO-101’s savings account. Independent verification checked the account URL, heading, and displayed member ID, then extracted a balance of 1250.00 USD into a typed result.
 
+## D017 — Store capabilities as versioned, parameterized JSON
+
+**Decision:** Represent reusable capabilities with typed actions, explicit input references, path checkpoints, and named input/output contracts. Record link destinations so replay does not depend on member-specific display names.
+
+**Reason:** Enables deterministic replay with different member IDs and keeps the reusable workflow separate from discovery logs.
+
+**Tradeoff:** The initial schema supports the demo’s savings-balance workflow and URL structure; broader workflows will require extensions.
+

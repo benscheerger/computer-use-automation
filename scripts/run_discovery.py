@@ -11,6 +11,7 @@ from automation.policy import check_url
 
 from automation.policy import PolicyViolation
 from automation.verification import verify_balance
+from automation.capability import Capability, MemberLookupInputs
 
 
 def main():
@@ -22,11 +23,11 @@ def main():
     )
     load_dotenv(key_file, override=True)
 
-    member_id = "DEMO-101"
+    inputs = MemberLookupInputs(member_id="DEMO-101")
     account_type = "savings"
 
     goal = (
-        f"Find member {member_id} and return their {account_type} "
+        f"Find member {inputs.member_id} and return their {account_type} "
         "account's available balance and currency."
     )
     
@@ -47,28 +48,57 @@ def main():
                 page.goto(start_url)
                 print(f"Model: {MODEL}")
 
-                finish = run_discovery(
+                discovery = run_discovery(
                     client=client,
                     page=page,
                     goal=goal,
+                    inputs=inputs,
                     blocked_requests=blocked_requests,
                     max_steps=8,
                 )
 
                 result = verify_balance(
                     page=page,
-                    expected_member_id=member_id,
+                    expected_member_id=inputs.member_id,
                     expected_account_type=account_type,
                 )
 
                 if blocked_requests:
                     raise PolicyViolation(blocked_requests[-1])
 
+                # Only construct and save a capability after verification.
+                capability = Capability(
+                    schema_version="1.0",
+                    name="get_savings_balance",
+                    source_run_id=discovery.run_id,
+                    start_path="/",
+                    input_type="MemberLookupInputs",
+                    output_type="BalanceResult",
+                    verifier="savings_balance_v1",
+                    steps=discovery.steps,
+                )
+
+                project_root = Path(__file__).resolve().parents[1]
+                artifact_path = (
+                    project_root
+                    / "evidence"
+                    / "capabilities"
+                    / "get_savings_balance.json"
+                )
+                artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                artifact_path.write_text(
+                    capability.model_dump_json(indent=2) + "\n",
+                    encoding="utf-8",
+                )
+
                 print("\nModel summary:")
-                print(finish.summary)
+                print(discovery.finish.summary)
 
                 print("\nVerified result:")
                 print(result.model_dump_json(indent=2))
+
+                print(f"\nSaved capability: {artifact_path}")
+                print(f"Recorded browser actions: {len(capability.steps)}")
 
             finally:
                 browser.close()
