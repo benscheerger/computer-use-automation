@@ -47,3 +47,38 @@ The executor checks permitted origins, paths, form fields, and buttons before ac
 **D012 — Enforce policy on browser requests**  
 Status: Implemented; validation in progress  
 A browser-context request guard checks destinations and permits only GET requests for the current read-only demo. HTTP redirects and service workers are blocked to simplify enforcement. Policy violations retain a reason without recording full request contents. Disallowed-path blocking is verified; method and redirect blocking still require separate checks.
+
+## D013 — Separate planning from execution
+
+**Decision:** The LLM proposes one action from the current page observation. A separate executor checks policy and performs the action.
+
+**Reason:** Keeps browser control predictable and lets discovery and deterministic replay share the same executor.
+
+**Tradeoff:** Adds coordination between components; the planner alone cannot confirm execution or success.
+
+## D014 — Require structured model responses
+
+**Decision:** Request model output matching the existing Pydantic `NextAction` schema. Stop if the response is incomplete or has no parsed action.
+
+**Reason:** Gives the executor a typed action instead of requiring it to interpret free-form text.
+
+**Tradeoff:** Valid structure does not guarantee a correct or permitted action; policy checks and outcome verification remain necessary.
+
+## D015 — Bound discovery runs
+
+**Decision:** Discovery observes the page, proposes one action, and executes it, with a configurable step limit. Policy violations and execution errors stop the run.
+
+**Reason:** Limits model usage and prevents endless action loops.
+
+**Tradeoff:** Recoverable failures currently stop the run until explicit recovery handling is added.
+
+## D016 — Verify completion directly from the UI
+
+**Decision:** Treat the model’s finish action as a request for verification. Check the requested member and account, then extract a typed balance result directly from the page.
+
+**Reason:** Success should depend on observable page evidence, independently of the model’s summary.
+
+**Tradeoff:** Verification initially depends on the demo’s page structure and must be adapted for other applications.
+
+**Validation:** Discovery reached DEMO-101’s savings account. Independent verification checked the account URL, heading, and displayed member ID, then extracted a balance of 1250.00 USD into a typed result.
+

@@ -2,6 +2,7 @@ from playwright.sync_api import expect, sync_playwright
 from automation.actions import ClickAction, FillAction
 from automation.executor import execute_action
 from automation.network import install_request_guard
+from automation.verification import VerificationError, verify_balance
 
 def main():
     with sync_playwright() as playwright:
@@ -60,6 +61,20 @@ def main():
 
             print("Browser check passed.")
             
+            result = verify_balance(page, "DEMO-101", "savings")
+            assert result.member_id == "DEMO-101"
+            assert result.currency == "USD"
+            print("Result verification passed.")
+
+            try:
+                verify_balance(page, "DEMO-202", "savings")
+            except VerificationError:
+                print("Wrong-member verification correctly rejected.")
+            else:
+                raise AssertionError(
+                    "Verification accepted the wrong member."
+                )            
+
             blocked_before = len(blocked_requests)
 
             request_failed = page.evaluate("""

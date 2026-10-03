@@ -1,10 +1,10 @@
 # Assignment checklist
 
 ## 3.1 Goal-driven agent loop
-- [ ] Accept a natural-language goal and target application.
-- [ ] Use a real LLM to observe the UI, choose actions, and execute them.
-- [ ] Verify goal completion.
-- [ ] Stop on step limits, timeouts, or a dead end.
+- [] Accept a natural-language goal and target application.
+- [X] Use a real LLM to observe the UI, choose actions, and execute them.
+- [X] Verify goal completion.
+- [X] Stop on step limits, timeouts, or a dead end.
 
 ## 3.2 Structured capability artifact
 - [ ] Record the successful run as a typed, versioned artifact.
