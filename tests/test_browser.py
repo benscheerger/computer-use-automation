@@ -80,7 +80,7 @@ def main():
             request_failed = page.evaluate("""
                 async () => {
                     try {
-                        await fetch("/transfer", {method: "POST"});
+                        await fetch("/", {method: "POST"});
                         return false;
                     } catch {
                         return true;
