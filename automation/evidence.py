@@ -66,6 +66,7 @@ class EvidenceEvent(StrictModel):
     action: ActionKind | None
     error_type: str | None
     human_action: HumanAction | None = None
+    dataset_id: str | None = None
 
 
 class RunLog:
@@ -74,11 +75,13 @@ class RunLog:
         directory: Path,
         mode: Literal["discovery", "replay"],
         source_run_id: str | None = None,
+        dataset_id: str | None = None,
     ):
         self.run_id = str(uuid4())
         self.path = directory / f"{self.run_id}.jsonl"
         self.mode: Literal["discovery", "replay"] = mode
         self.source_run_id = source_run_id
+        self.dataset_id: str | None = dataset_id
 
         self._file: TextIO | None = None
         self._started_at = 0.0
@@ -125,6 +128,7 @@ class RunLog:
             action=action,
             error_type=error_type,
             human_action=human_action,
+            dataset_id=self.dataset_id,
         )
 
         self._file.write(entry.model_dump_json() + "\n")
@@ -133,7 +137,7 @@ class RunLog:
         self._step = step
         self._action = action
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> Literal[False]:
         file = self._file
 
         if file is None:

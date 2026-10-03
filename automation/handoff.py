@@ -3,7 +3,9 @@ import webbrowser
 
 from automation.operator_panel import OperatorPanel
 import time
-from typing import Any
+from typing import Any, Protocol
+
+from automation.console_takeover import ConsoleTakeover
 from urllib.parse import urljoin, urlsplit
 
 from playwright.sync_api import Error as PlaywrightError
@@ -86,7 +88,16 @@ MANUAL_RECORDER = """
 })();
 """
 
-
+class TakeoverPanelFactory(Protocol):
+    def __call__(
+        self,
+        *,
+        run_id: str,
+        member_id: str,
+        step: int,
+        timeout_seconds: float,
+    ) -> OperatorPanel | ConsoleTakeover:
+        ...
 class HumanTakeover:
     def __init__(
         self,
@@ -96,6 +107,7 @@ class HumanTakeover:
         blocked_requests: list[str],
         enabled: bool,
         timeout_seconds: float = 180,
+        panel_factory: TakeoverPanelFactory | None = None,
     ):
         if timeout_seconds <= 0:
             raise ValueError("Takeover timeout must be positive.")
@@ -111,6 +123,7 @@ class HumanTakeover:
         self._step: int | None = None
         self._recorded_actions = 0
         self._recording_limit_reported = False
+        self.panel_factory = panel_factory
 
         if enabled:
             page.expose_binding(
@@ -259,8 +272,10 @@ class HumanTakeover:
             raise VerificationError(
                 "The run has already used its human takeover."
             )
+        
+        factory = self.panel_factory or OperatorPanel
 
-        panel = OperatorPanel(
+        panel = factory(
             run_id=self.log.run_id,
             member_id=member_id,
             step=step,
@@ -290,12 +305,11 @@ class HumanTakeover:
                     "Resume or Cancel in the operator panel."
                 )
 
-                try:
-                    webbrowser.open(panel.url)
-                except webbrowser.Error:
-                    print(
-                        "Open the operator panel URL manually."
-                    )
+                if self.panel_factory is None:
+                    try:
+                        webbrowser.open(panel.url)
+                    except webbrowser.Error:
+                        print("Open the operator panel URL manually.")
 
                 while True:
                     self._check_session()
@@ -361,10 +375,9 @@ class HumanTakeover:
 
                         panel.set_status(
                             "resumed",
-                            "Checkpoint validated. Automation "
-                            "will continue in the banking browser. "
-                            "Check the terminal for the final result.",
-                        )
+                            "Checkpoint validated. Automation will continue "
+                            "in the banking browser.",
+)
                         return
 
                     # Process browser events and guarded requests

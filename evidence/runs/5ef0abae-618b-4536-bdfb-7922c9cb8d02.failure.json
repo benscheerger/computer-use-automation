@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "run_id": "5ef0abae-618b-4536-bdfb-7922c9cb8d02",
+  "source_run_id": "c2b8569b-59b0-4523-9baf-245ee192a28e",
+  "failure": {
+    "status": "failure",
+    "code": "verification_failed",
+    "step": 4,
+    "expected": "Restore the requested member-details checkpoint and an unobstructed, unique recorded link.",
+    "observed": "page=member_details; requested_member_matches=True; target_matches=None",
+    "error_type": "HumanTakeoverCancelled"
+  },
+  "dom": {
+    "nodes": [
+      {
+        "index": 0,
+        "parent_index": null,
+        "tag": "body",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 1,
+        "parent_index": 0,
+        "tag": "a",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 2,
+        "parent_index": 0,
+        "tag": "h1",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 3,
+        "parent_index": 0,
+        "tag": "p",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 4,
+        "parent_index": 0,
+        "tag": "h2",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 5,
+        "parent_index": 0,
+        "tag": "ul",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 6,
+        "parent_index": 5,
+        "tag": "li",
+        "has_layout_box": true,
+        "disabled": false
+      },
+      {
+        "index": 7,
+        "parent_index": 6,
+        "tag": "a",
+        "has_layout_box": true,
+        "disabled": false
+      }
+    ],
+    "truncated": false
+  },
+  "known_controls": {
+    "member_id_fields": 0,
+    "search_buttons": 0,
+    "savings_links": 1
+  },
+  "frame_count": 1,
+  "capture_error": null
+}

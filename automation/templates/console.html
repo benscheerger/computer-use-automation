@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="console-token" content="{{ token }}">
+    <title>Automation Console</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #f3f5f8;
+            color: #172033;
+            font-family: system-ui, sans-serif;
+        }
+
+        main {
+            max-width: 1050px;
+            margin: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        section {
+            background: white;
+            border: 1px solid #dce2eb;
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin: 16px 0 6px;
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bbc5d4;
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 10px 16px;
+            background: #2457d6;
+            color: white;
+            border: 0;
+            border-radius: 6px;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            max-height: 340px;
+            overflow: auto;
+            padding: 14px;
+            background: #f6f8fb;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .muted {
+            color: #586477;
+            font-size: 14px;
+        }
+
+        #status {
+            display: inline-block;
+            background: #e9eefb;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 760px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<main>
+    <h1>Automation console</h1>
+
+    <div class="grid">
+        <section>
+            <h2>Start a run</h2>
+
+            <form id="task-form">
+                <label for="mode">Run mode</label>
+                <select id="mode">
+                    <option value="discovery">Discover Mode</option>
+                    <option value="replay">Replay Mode</option>
+                </select>
+
+                <div id="capability-fields" hidden>
+                    <label for="capability">Saved capability</label>
+                    <select id="capability"></select>
+
+                    <label for="notice-mode">Demo notice</label>
+                    <select id="notice-mode">
+                        <option value="off">Off</option>
+                        <option value="dismissible">Dismissible</option>
+                        <option value="persistent">
+                            Persistent — test human takeover
+                        </option>
+                    </select>
+
+                    <label for="takeover-enabled">Human takeover</label>
+                    <select id="takeover-enabled">
+                        <option value="yes">Enabled</option>
+                        <option value="no">Disabled</option>
+                    </select>
+                </div>
+
+                <label for="dataset">Dataset</label>
+                <select id="dataset" required>
+                    <option value="">Loading datasets…</option>
+                </select>
+
+                <label for="member">Member ID</label>
+                <input
+                    id="member"
+                    value="DEMO-101"
+                    pattern="DEMO-[0-9]+"
+                    required
+                >
+
+                <div id="goal-fields">
+                    <label for="goal">Task</label>
+                    <textarea
+                        id="goal"
+                        rows="4"
+                        maxlength="1000"
+                        required
+                    >Find this member's available savings balance and report its currency.</textarea>
+
+                    <p class="muted">
+                        Describe a savings-balance lookup.
+                        The Member ID field selects the target.
+                    </p>
+                </div>
+
+                <button id="start" type="submit" disabled>
+                    Start discovery
+                </button>
+            </form>
+
+            <p id="form-message" role="alert"></p>
+        </section>
+
+        <section>
+            <h2>Current run</h2>
+            <p id="status" role="status">Connecting</p>
+            <p id="message" aria-live="polite"></p>
+            <p id="run-id" class="muted"></p>
+
+            <div id="takeover-controls" hidden>
+                <h3>Human takeover</h3>
+                <p id="takeover-context"></p>
+                <p id="takeover-message" aria-live="polite"></p>
+
+                <button id="takeover-resume" type="button" disabled>
+                    Resume
+                </button>
+
+                <button id="takeover-cancel" type="button" disabled>
+                    Cancel run
+                </button>
+
+                <p id="takeover-feedback" aria-live="polite"></p>
+            </div>
+
+            <h3 id="response-heading">Agent response</h3>
+            <p id="agent-response" aria-live="polite">
+                No response yet.
+            </p>
+
+            <h3>Verified result</h3>
+            <pre id="result">No result yet.</pre>
+        </section>
+    </div>
+
+    <section>
+        <h2>Live evidence</h2>
+        <pre id="live-log">No active run.</pre>
+    </section>
+
+    <section>
+        <h2>Run history</h2>
+
+        <label for="history">Saved run</label>
+        <select id="history"></select>
+
+        <button id="refresh-history" type="button">
+            Refresh history
+        </button>
+
+        <button id="view-history" type="button">
+            View selected log
+        </button>
+
+        <pre id="history-log">Select a run to read its log.</pre>
+    </section>
+</main>
+
+<script>
+    const token = document.querySelector(
+        'meta[name="console-token"]'
+    ).getAttribute("content");
+
+    const dataset = document.getElementById("dataset");
+    const member = document.getElementById("member");
+    const goal = document.getElementById("goal");
+    const start = document.getElementById("start");
+    const history = document.getElementById("history");
+    const formMessage = document.getElementById("form-message");
+    const mode = document.getElementById("mode");
+    const capability = document.getElementById("capability");
+    const noticeMode = document.getElementById("notice-mode");
+    const takeoverEnabled = document.getElementById("takeover-enabled");
+    const takeoverControls = document.getElementById("takeover-controls");
+    const takeoverContext = document.getElementById("takeover-context");
+    const takeoverMessage = document.getElementById("takeover-message");
+    const takeoverResume = document.getElementById("takeover-resume");
+    const takeoverCancel = document.getElementById("takeover-cancel");
+    const takeoverFeedback = document.getElementById("takeover-feedback");
+
+    let activeTakeover = null;
+    let takeoverSubmitting = false;
+    let capabilitiesAvailable = false;
+    let datasetsAvailable = false;
+    let submitting = false;
+    let lastFinishedRun = null;
+
+    async function api(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                "X-Console-Token": token,
+                ...(options.headers || {}),
+            },
+        });
+
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(body.error || "Request failed.");
+        }
+
+        return body;
+    }
+
+    function setBusy(busy) {
+        const isReplay = mode.value === "replay";
+
+        mode.disabled = busy;
+        dataset.disabled = busy;
+        member.disabled = busy;
+
+        goal.disabled = busy || isReplay;
+        goal.required = !isReplay;
+
+        capability.disabled = busy || !isReplay;
+        capability.required = isReplay;
+
+        noticeMode.disabled = busy || !isReplay;
+        takeoverEnabled.disabled = busy || !isReplay;
+
+        document.getElementById("goal-fields").hidden = isReplay;
+        document.getElementById("capability-fields").hidden = !isReplay;
+
+        start.textContent = isReplay
+            ? "Start replay"
+            : "Start discovery";
+
+        start.disabled =
+            busy ||
+            !datasetsAvailable ||
+            (isReplay && !capabilitiesAvailable);
+    }
+
+    async function loadCapabilities() {
+        const selected = capability.value;
+        const items = await api("/api/capabilities");
+
+        capability.replaceChildren();
+
+        for (const item of items) {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.label;
+            capability.appendChild(option);
+        }
+
+        capabilitiesAvailable = items.length > 0;
+
+        if (items.some(item => item.id === selected)) {
+            capability.value = selected;
+        }
+
+        if (!capabilitiesAvailable) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "No saved capabilities";
+            capability.appendChild(option);
+        }
+    }
+
+    mode.addEventListener("change", () => {
+        setBusy(false);
+    });
+
+    async function loadDatasets() {
+        const items = await api("/api/datasets");
+
+        dataset.replaceChildren();
+
+        for (const item of items) {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.label;
+            dataset.appendChild(option);
+        }
+
+        if (items.some(item => item.id === "members")) {
+            dataset.value = "members";
+        }
+
+        datasetsAvailable = items.length > 0;
+
+        if (!datasetsAvailable) {
+            formMessage.textContent =
+                "No datasets are available in the demo data directory.";
+        }
+    }
+
+    async function loadHistory() {
+        const selected = history.value;
+        const runs = await api("/api/runs");
+
+        history.replaceChildren();
+
+        for (const run of runs) {
+            const option = document.createElement("option");
+            option.value = run.run_id;
+
+            const date = new Date(
+                run.modified * 1000
+            ).toLocaleString();
+
+            option.textContent =
+                `${date} — ${run.run_id.slice(0, 8)}`;
+
+            history.appendChild(option);
+        }
+
+        if (runs.some(run => run.run_id === selected)) {
+            history.value = selected;
+        }
+    }
+
+    function render(state) {
+        const busy = submitting || [
+            "queued",
+            "running",
+            "human",
+            "validating",
+        ].includes(state.status);
+
+        if (busy && state.mode) {
+            mode.value = state.mode;
+
+            if (state.dataset_id) {
+                dataset.value = state.dataset_id;
+            }
+
+            if (state.member_id) {
+                member.value = state.member_id;
+            }
+
+            if (state.mode === "discovery" && state.goal) {
+                goal.value = state.goal;
+            }
+
+            if (state.capability_id) {
+                capability.value = state.capability_id;
+            }
+
+            if (state.mode === "replay") {
+                noticeMode.value = state.notice_mode || "off";
+                takeoverEnabled.value = state.allow_human_takeover
+                    ? "yes"
+                    : "no";
+            }
+        }
+
+        setBusy(busy);
+
+        document.getElementById("status").textContent =
+            state.status;
+
+        document.getElementById("message").textContent =
+            state.message;
+
+        document.getElementById("run-id").textContent =
+            state.run_id ? `Run: ${state.run_id}` : "";
+
+        const isReplay = state.mode === "replay";
+        const outcome = isReplay
+            ? state.result?.replay_result
+            : state.result;
+
+        document.getElementById("response-heading").textContent =
+            isReplay ? "Replay response" : "Agent response";
+
+        let response = state.result?.model_summary ||
+            "No response yet.";
+
+        if (isReplay && outcome) {
+            if (outcome.status === "success") {
+                const output = outcome.outputs;
+
+                response =
+                    `Member ${output.member_id}'s ` +
+                    `${output.account_type} account has an available ` +
+                    `balance of ${output.available_balance} ` +
+                    `${output.currency}.`;
+            } else if (outcome.status === "business_outcome") {
+                response =
+                    `Member ${outcome.member_id} was not found.`;
+            } else {
+                response =
+                    `Replay stopped at step ` +
+                    `${outcome.step ?? "unknown"}: ${outcome.code}.`;
+            }
+        }
+
+        document.getElementById("agent-response").textContent =
+            response;
+
+        document.getElementById("result").textContent =
+            outcome
+                ? JSON.stringify(
+                    outcome.outputs || outcome,
+                    null,
+                    2
+                )
+                : state.error_type
+                    ? `Failure type: ${state.error_type}`
+                    : "No result yet.";
+
+        document.getElementById("live-log").textContent =
+            state.log_error
+                ? "The current evidence log could not be read."
+                : state.events?.length
+                    ? JSON.stringify(state.events, null, 2)
+                    : "No events yet.";
+
+        if (
+            ["success", "business_outcome", "failure"].includes(
+                state.status
+            ) &&
+            state.run_id &&
+            state.run_id !== lastFinishedRun
+        ) {
+            lastFinishedRun = state.run_id;
+
+            Promise.all([
+                loadHistory(),
+                loadCapabilities(),
+            ]).catch(() => {
+                document.getElementById("history-log").textContent =
+                    "Saved runs or capabilities could not be refreshed.";
+            });
+        }
+
+        activeTakeover = state.takeover || null;
+        takeoverControls.hidden = activeTakeover === null;
+
+        if (activeTakeover) {
+            takeoverContext.textContent =
+                `Member: ${activeTakeover.member_id} · ` +
+                `Step: ${activeTakeover.step} · ` +
+                `${activeTakeover.remaining_seconds}s remaining`;
+
+            takeoverMessage.textContent = activeTakeover.message;
+
+            const disabled =
+                takeoverSubmitting || !activeTakeover.can_command;
+
+            takeoverResume.disabled = disabled;
+            takeoverCancel.disabled = disabled;
+        } else {
+            takeoverResume.disabled = true;
+            takeoverCancel.disabled = true;
+            takeoverFeedback.textContent = "";
+        }
+    }
+
+    async function sendTakeoverCommand(command) {
+        if (
+            takeoverSubmitting ||
+            !activeTakeover ||
+            !activeTakeover.can_command
+        ) {
+            return;
+        }
+
+        const target = activeTakeover;
+
+        takeoverSubmitting = true;
+        takeoverFeedback.textContent = "";
+        takeoverResume.disabled = true;
+        takeoverCancel.disabled = true;
+
+        try {
+            const state = await api("/api/takeover", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    run_id: target.run_id,
+                    step: target.step,
+                    command,
+                }),
+            });
+
+            render(state);
+        } catch (error) {
+            takeoverFeedback.textContent = error.message;
+        } finally {
+            takeoverSubmitting = false;
+        }
+    }
+
+    takeoverResume.addEventListener("click", () => {
+        sendTakeoverCommand("resume");
+    });
+
+    takeoverCancel.addEventListener("click", () => {
+        sendTakeoverCommand("cancel");
+    });
+
+    async function poll() {
+        try {
+            render(await api("/api/state"));
+        } catch {
+            setBusy(true);
+
+            activeTakeover = null;
+            takeoverResume.disabled = true;
+            takeoverCancel.disabled = true;
+
+            document.getElementById("message").textContent =
+                "Console connection unavailable. Retrying…";
+        }
+
+        setTimeout(poll, 500);
+    }
+
+    document.getElementById("task-form").addEventListener(
+        "submit",
+        async event => {
+            event.preventDefault();
+
+            const isReplay = mode.value === "replay";
+
+            const body = isReplay
+                ? {
+                    dataset_id: dataset.value,
+                    capability_id: capability.value,
+                    inputs: {
+                        member_id: member.value.trim(),
+                    },
+                    notice_mode: noticeMode.value,
+                    allow_human_takeover:
+                        takeoverEnabled.value === "yes",
+                }
+                : {
+                    dataset_id: dataset.value,
+                    task: {
+                        goal: goal.value,
+                        inputs: {
+                            member_id: member.value.trim(),
+                        },
+                    },
+                };
+
+            submitting = true;
+            setBusy(true);
+            formMessage.textContent = "";
+
+            try {
+                await api(
+                    isReplay ? "/api/replay" : "/api/discovery",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(body),
+                    }
+                );
+            } catch (error) {
+                formMessage.textContent = error.message;
+            } finally {
+                submitting = false;
+            }
+        }
+    );
+
+    document.getElementById("refresh-history").addEventListener(
+        "click",
+        () => loadHistory().catch(error => {
+            document.getElementById("history-log").textContent =
+                error.message;
+        })
+    );
+
+    document.getElementById("view-history").addEventListener(
+        "click",
+        async () => {
+            if (!history.value) return;
+
+            try {
+                const log = await api(
+                    `/api/runs/${encodeURIComponent(history.value)}`
+                );
+
+                document.getElementById("history-log").textContent =
+                    JSON.stringify(log.events, null, 2);
+            } catch (error) {
+                document.getElementById("history-log").textContent =
+                    error.message;
+            }
+        }
+    );
+
+    async function initialize() {
+        try {
+            await loadDatasets();
+            await loadCapabilities();
+            await loadHistory();
+            poll();
+        } catch (error) {
+            formMessage.textContent = error.message;
+        }
+    }
+
+    initialize();
+</script>
+</body>
+</html>

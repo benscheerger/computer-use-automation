@@ -7,6 +7,7 @@ from automation.recovery import (
     recover_known_notice,
 )
 from automation.handoff import HumanTakeover
+from automation.handoff import TakeoverPanelFactory
 
 from playwright.sync_api import (
     Error as PlaywrightError,
@@ -169,6 +170,7 @@ def run_replay(
     base_url: str,
     log: RunLog,
     allow_human_takeover: bool = False,
+    panel_factory: TakeoverPanelFactory | None = None,
 ) -> ReplayResult:
     
     step_index: int | None = None
@@ -190,6 +192,7 @@ def run_replay(
             log=log,
             blocked_requests=blocked_requests,
             enabled=allow_human_takeover,
+            panel_factory=panel_factory,
         )
 
         for index, step in enumerate(capability.steps, start=1):
