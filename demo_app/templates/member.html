@@ -3,53 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <title>Demo Bank — Member Details</title>
+
+    <style>
+        .notice-human-action {
+            display: none;
+        }
+
+        html[data-notice-owner="human"] .notice-automatic-action {
+            display: none;
+        }
+
+        html[data-notice-owner="human"] .notice-human-action {
+            display: inline-block;
+        }
+    </style>
 </head>
+
 <body>
     {% if notice_mode != "off" %}
-        <div
-            role="dialog"
-            aria-label="Service notice"
-            aria-modal="true"
-            style="
-                position: fixed;
-                inset: 0;
-                z-index: 1000;
-                background: rgba(0, 0, 0, 0.25);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            "
-        >
-            <div style="background: white; padding: 24px;">
-                <h2>Service notice</h2>
-                <p>This is a simulated informational notice.</p>
+    <div
+        role="dialog"
+        aria-label="Service notice"
+        aria-modal="true"
+        style="
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        "
+    >
+        <div style="background: white; padding: 24px;">
+            <h2>Service notice</h2>
+            <p>This is a simulated informational notice.</p>
 
-                {% if notice_mode == "dismissible" %}
-                    <button
-                        type="button"
-                        onclick="this.closest('[role=dialog]').remove();"
-                    >
-                        Dismiss notice
-                    </button>
-                {% else %}
-                    <button type="button">
-                        Dismiss notice
-                    </button>
+            {% if notice_mode == "dismissible" %}
+            <button
+                type="button"
+                class="notice-automatic-action"
+                onclick="this.closest('[role=dialog]').remove();"
+            >
+                Dismiss notice
+            </button>
+            {% else %}
+            <button
+                type="button"
+                class="notice-automatic-action"
+            >
+                Dismiss notice
+            </button>
+            {% endif %}
 
-                    <button
-                        type="button"
-                        onclick="this.closest('[role=dialog]').remove();"
-                    >
-                        Resolve notice manually
-                    </button>
-                {% endif %}
-            </div>
+            <button
+                type="button"
+                class="notice-human-action"
+                onclick="this.closest('[role=dialog]').remove();"
+            >
+                Resolve notice manually
+            </button>
         </div>
+    </div>
     {% endif %}
 
-    <a href="{{ url_for('search') }}">
-        Back to member search
-    </a>
+    <a href="{{ url_for('search') }}">Back to member search</a>
 
     <h1>{{ member["name"] }}</h1>
     <p>Member ID: {{ member_id }}</p>
@@ -58,17 +76,17 @@
 
     <ul>
         {% for account_type in member["accounts"] %}
-            <li>
-                <a href="{{ url_for(
-                    'account_details',
-                    member_id=member_id,
-                    account_type=account_type
-                ) }}">
-                    {{ account_type | capitalize }}
-                </a>
-            </li>
+        <li>
+            <a href="{{ url_for(
+                'account_details',
+                member_id=member_id,
+                account_type=account_type
+            ) }}">
+                {{ account_type | capitalize }}
+            </a>
+        </li>
         {% else %}
-            <li>No accounts found.</li>
+        <li>No accounts found.</li>
         {% endfor %}
     </ul>
 </body>

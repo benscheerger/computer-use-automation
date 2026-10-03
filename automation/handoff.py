@@ -168,6 +168,30 @@ class HumanTakeover:
         )
         self._recorded_actions += 1
 
+    def _sync_notice_owner(self) -> None:
+        if self.page.is_closed():
+            return
+
+        owner = "human" if self._active else "automation"
+
+        try:
+            self.page.evaluate(
+                """
+                (owner) => {
+                    const root = document.documentElement;
+
+                    if (root && root.dataset.noticeOwner !== owner) {
+                        root.dataset.noticeOwner = owner;
+                    }
+                }
+                """,
+                owner,
+            )
+        except PlaywrightError:
+            # Navigation may replace the document.
+            # The takeover loop retries on its next iteration.
+            pass
+
     def _check_session(self) -> None:
         if self.page.is_closed():
             raise VerificationError(
@@ -313,6 +337,7 @@ class HumanTakeover:
 
                 while True:
                     self._check_session()
+                    self._sync_notice_owner()
 
                     if time.monotonic() >= panel.deadline:
                         panel.set_status(
@@ -386,6 +411,7 @@ class HumanTakeover:
 
             finally:
                 self._active = False
+                self._sync_notice_owner()
 
                 self.log.emit(
                     "handoff_ended",

@@ -205,3 +205,25 @@ A browser-context request guard checks destinations and permits only GET request
 **Reason:** Make the project straightforward to operate and keep runs reproducible.
 
 **Tradeoff:** Requires a persistent controller and dataset-aware demo startup. Task execution initially remains scoped to savings-balance lookup.
+
+## D032 — Share takeover logic across interfaces
+
+Decision:
+Inject the takeover panel factory so CLI runs use a temporary panel and console runs use the persistent interface.
+
+Reason:
+Reuse the same recording, timeout, cancellation, and resume validation. Commands enter a queue and are processed by the replay thread; run and step identifiers reject stale requests.
+
+Tradeoff:
+Adds a small interface boundary and command state to maintain.
+
+## D033 — Show notice controls for the current operator
+
+Decision:
+Show Dismiss notice during automation and Resolve notice manually during human takeover.
+
+Reason:
+Make ownership clear and hide controls that are irrelevant to the current operator. Persistent automatic dismissal still fails intentionally to exercise recovery and takeover.
+
+Tradeoff:
+Adds demo-specific display state that must be synchronized during takeover and reset afterward.
