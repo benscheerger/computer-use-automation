@@ -1,2 +1,2 @@
-***smartBank***
-**LLM banking UI discovery and deterministic replay**
+# **smartBank**
+## **LLM banking UI discovery and deterministic replay**
